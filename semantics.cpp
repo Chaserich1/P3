@@ -24,7 +24,7 @@ void push(Token tkn){
    }else{
       for(int i = startingScope; i < varCount; i++){
          if(stack[i].stringToken == tkn.stringToken){
-            cout << "Error: var already declared" << endl;
+            cout << "Error: " << tkn.stringToken << " already declared in current scope" << endl;
             exit(EXIT_FAILURE);
          }
       }
@@ -91,7 +91,7 @@ void semantics(Node* node, int counter){
          push(node -> firstToken);
          counter++;
       }else if(TOS < counter){
-         cout << "Error: token already declared in current scope" << endl;
+         cout << "Error: " << node -> firstToken.stringToken << " already declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
       if(node -> firstChild != nullptr){
@@ -130,14 +130,22 @@ void semantics(Node* node, int counter){
       }else if(node -> firstChild != nullptr){
          semantics(node -> firstChild, counter);
       }
+   }else if(node -> nonTerminal == "<R>"){
+      if(node -> firstToken.identiToken == IdTk){
+         if(!duplicateCheck(node -> firstToken)){
+            cout << "Error: " << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
+         }
+      }else if(node -> firstChild != nullptr){
+         semantics(node -> firstChild, counter);
+      }
    }else if(node -> nonTerminal == "<in>"){
       if(!duplicateCheck(node -> firstToken)){
-         cout << "Error: token not yet declared in current scope" << endl;
+         cout << "Error:" << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
    }else if(node -> nonTerminal == "<assign>"){
       if(!duplicateCheck(node -> firstToken)){
-         cout << "Error: token not yet declared in current scope" << endl;
+         cout << "Error: " << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
       if(node -> firstChild != nullptr){
