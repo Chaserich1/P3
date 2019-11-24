@@ -5,54 +5,64 @@
 #include "semantics.h"
 #include <iostream>
 
+//max stack is 100
 const int maxStack = 100;
+//stack of tokens as an array
 Token stack[maxStack];
 
-int varCount = 0;
-int startingScope = 0;
 
-void stacker(){
-   for(int i = 0; i <= maxStack; i++){
-      stack[i].stringToken = "";
-   }
-}
+int totVarCount = 0; //keep track of the total number of variables
+int currScpFirstEle = 0; //keep track of the starting position of current scope
 
+//Push onto the stack
 void push(Token tkn){
-   if(varCount >= maxStack){
-      cout << "Error: Stack is at its max size" << endl;
+   //If we have more than 100 items then overflow because stack size is 100
+   if(totVarCount > maxStack){
+      cout << "Error: Stack Overflow" << endl;
       exit(EXIT_FAILURE);
    }else{
-      for(int i = startingScope; i < varCount; i++){
+      for(int i = currScpFirstEle; i < totVarCount; i++){
+         //Check if the variable has already been defined in the current scope and if it has exit
          if(stack[i].stringToken == tkn.stringToken){
             cout << "Error: " << tkn.stringToken << " already declared in current scope" << endl;
             exit(EXIT_FAILURE);
          }
       }
-      stack[varCount] = tkn;
-      varCount++;
+      stack[totVarCount] = tkn; //set tkn to the total variable count in the stack
+      totVarCount++; //increment the total variable count
    }
 }
 
-void pop(int startingScope){
-   for(int i = varCount; i > startingScope; i--){
-      varCount--;
-      stack[i].stringToken == "";
+/*Take in the first element of the current scope and pop from the 
+ stack all of the elements on the stack from the end back to 
+ the first element of the current scope*/
+void pop(int currScpFirstEle){
+   //Start at the top of the stack and go through the current scope
+   for(int i = totVarCount; i > currScpFirstEle; i--){
+      totVarCount--; //decrement total variable count
+      stack[i].stringToken == ""; 
    }
 }
 
+/*find the item on the stack and return the distance from the
+  top if found, otherwise return -1 if it is not found*/
 int find(Token tkn){
-   for(int i = varCount; i >= startingScope; i--){
-      cout << startingScope << " " << varCount << endl;
+   /*start on the top of the stack and go down until the 
+     first element of the current scope*/
+   for(int i = totVarCount; i >= currScpFirstEle; i--){ 
+      /*If we find the item then return the distance from 
+        the top of the stack*/
       if(stack[i].stringToken == tkn.stringToken){
-         int TOS = varCount - 1 - i;
+         int TOS = totVarCount - 1 - i;
          return TOS;
       }
    }
-   return -1;
+   return -1; //return -1 if the item is not found
 }
 
-bool duplicateCheck(Token tkn){
-   for(int i = varCount - 1; i > -1; i--){
+//Check if variable already exists. Return true if it does, false if not
+bool duplicateVarCheck(Token tkn){
+   for(int i = totVarCount - 1; i > -1; i--){
       if(stack[i].stringToken == tkn.stringToken){
          return true;
       }
@@ -60,109 +70,100 @@ bool duplicateCheck(Token tkn){
    return false;
 }
 
+//Build the stack
+void stacker(){
+   for(int i = 0; i <= maxStack; i++){
+      stack[i].stringToken = ""; //empty
+   }
+}
+
+//Static semantics function, different actions based on the subtree and node
 void semantics(Node* node, int counter){
+   //empty tree
    if(node == nullptr){
       return;
    }
-   
-   if(node -> nonTerminal == "<program>"){
-      int varsCounter = 0;
-      if(node -> firstChild != nullptr){
-         semantics(node -> firstChild, varsCounter);
-      }
-      if(node -> secondChild != nullptr){
-         semantics(node -> secondChild, varsCounter);
-      }
-   }else if(node -> nonTerminal == "<block>"){
-         int varsCounter = 0;
-         startingScope = varCount;
-         if(node -> firstChild != nullptr){
-            semantics(node -> firstChild, varsCounter);
-         }
-         if(node -> secondChild != nullptr){
-            semantics(node->secondChild, varsCounter);
-         }
-         
-         pop(startingScope);
-   }else if(node -> nonTerminal == "<vars>"){
-      int TOS = find(node -> firstToken);
-      startingScope = varCount;
+   //left to right traversal with different nonterminals, nodes and actions
+   if(node -> nonTerminal == "<program>"){ //proram nonTerminal
+      int varCount = 0; //initialize variable counter to 0
+      semantics(node -> firstChild, varCount);
+      semantics(node -> secondChild, varCount);
+   }else if(node -> nonTerminal == "<block>"){ //block nonTerminal
+         int varCount = 0; //set varCount to 0 for this block
+         //set first item in the scope equal to total variable count
+         currScpFirstEle = totVarCount; 
+         semantics(node -> firstChild, varCount);
+         semantics(node -> secondChild, varCount);
+         //pop the current scope       
+         pop(currScpFirstEle);
+   }else if(node -> nonTerminal == "<vars>"){ //vars nonTerminal
+      //find the first token and set it to top of stack
+      int TOS;
+      TOS = find(node -> firstToken);
+      //set first element of the scope to the total variable count
+      currScpFirstEle = totVarCount;
+      //if top of stack is -1 or greater than the count then push the token onto the stack and increment counter
       if(TOS == -1 || TOS > counter){
          push(node -> firstToken);
          counter++;
-      }else if(TOS < counter){
+      }else if(TOS < counter){ //if top of stack is less than counter then the the tken has already been declared in scope
          cout << "Error: " << node -> firstToken.stringToken << " already declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
+      //empty or <vars>
       if(node -> firstChild != nullptr){
          semantics(node -> firstChild, counter);
       }
-   }else if(node -> nonTerminal == "<expr>"){
+   }else if(node -> nonTerminal == "<expr>"){ //expr nonTerminal
+      //if there is a plus token then we have <A>+<expr>
       if(node -> firstToken.identiToken == PlusTk){
-         if(node -> firstChild != nullptr){
-            semantics(node -> firstChild, counter);
-         }
-         if(node -> secondChild != nullptr){
-            semantics(node -> secondChild, counter);
-         }
-      }else if(node -> firstChild != nullptr){
+         semantics(node -> firstChild, counter);
+         semantics(node -> secondChild, counter);
+      }else{ //no plus token then we just have <A>
          semantics(node -> firstChild, counter);
       }
-   }else if(node -> nonTerminal == "<A>"){
+   }else if(node -> nonTerminal == "<A>"){ //A nonTerminal
+      //if there is a minus token then we have <N>-<A>
       if(node -> firstToken.identiToken == MinusTk){
-         if(node -> firstChild != nullptr){
-            semantics(node -> firstChild, counter);
-         }
-         if(node -> secondChild != nullptr){
-            semantics(node -> secondChild, counter);
-         }
-      }else if(node -> firstChild != nullptr){
+         semantics(node -> firstChild, counter);
+         semantics(node -> secondChild, counter);
+      }else{ //otherwise we just have <N>
          semantics(node -> firstChild, counter);
       }
-   }else if(node -> nonTerminal == "<N>"){
+   }else if(node -> nonTerminal == "<N>"){ //N nonTerminal
+      //if we have a divide or mult token then we have either <M>/<N> or <M>*<N>
       if(node -> firstToken.identiToken == DivideTk || node -> firstToken.identiToken == MultiplicationTk){
-         if(node -> firstChild != nullptr){
-            semantics(node -> firstChild, counter);
-         }
-         if(node -> secondChild != nullptr){
-            semantics(node -> secondChild, counter);
-         }
-      }else if(node -> firstChild != nullptr){
+         semantics(node -> firstChild, counter);
+         semantics(node -> secondChild, counter);
+      }else{ //otherwise we just have <M>
          semantics(node -> firstChild, counter);
       }
-   }else if(node -> nonTerminal == "<R>"){
+   }else if(node -> nonTerminal == "<R>"){ //R nonTerminal
+      //if we have an identifier check to see if it has been declared in the current scope
       if(node -> firstToken.identiToken == IdTk){
-         if(!duplicateCheck(node -> firstToken)){
+         if(!duplicateVarCheck(node -> firstToken)){
             cout << "Error: " << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
          }
-      }else if(node -> firstChild != nullptr){
+      }else{
+         //<expr> 
          semantics(node -> firstChild, counter);
       }
-   }else if(node -> nonTerminal == "<in>"){
-      if(!duplicateCheck(node -> firstToken)){
-         cout << "Error:" << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
+   }else if(node -> nonTerminal == "<in>"){ //in nonTerminal
+      if(!duplicateVarCheck(node -> firstToken)){ //check if the identifier has been declared in this scope
+         cout << "Error:" << node -> firstToken.stringToken << " hasn't been declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
-   }else if(node -> nonTerminal == "<assign>"){
-      if(!duplicateCheck(node -> firstToken)){
-         cout << "Error: " << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
+   }else if(node -> nonTerminal == "<assign>"){ //assign nonTerminal
+      if(!duplicateVarCheck(node -> firstToken)){ //check if the identifier has been declared in this scope
+         cout << "Error: " << node -> firstToken.stringToken << " hasn't been declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
-      if(node -> firstChild != nullptr){
-         semantics(node -> firstChild, counter);
-      }
+      //<expr>
+      semantics(node -> firstChild, counter);
    }else{
-      if(node -> firstChild != nullptr){
-         semantics(node -> firstChild, counter);
-      }
-      if(node -> secondChild != nullptr){
-         semantics(node -> secondChild, counter);
-      }
-      if(node -> thirdChild != nullptr){
-         semantics(node -> thirdChild, counter);
-      }
-      if(node -> fourthChild != nullptr){
-         semantics(node -> fourthChild, counter);
-      }
+      semantics(node -> firstChild, counter);
+      semantics(node -> secondChild, counter);
+      semantics(node -> thirdChild, counter);
+      semantics(node -> fourthChild, counter);
    }
 }
