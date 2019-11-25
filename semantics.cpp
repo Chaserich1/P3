@@ -70,13 +70,6 @@ bool duplicateVarCheck(Token tkn){
    return false;
 }
 
-//Build the stack
-void stacker(){
-   for(int i = 0; i <= maxStack; i++){
-      stack[i].stringToken = ""; //empty
-   }
-}
-
 //Static semantics function, different actions based on the subtree and node
 void semantics(Node* node, int counter){
    //empty tree
@@ -86,6 +79,7 @@ void semantics(Node* node, int counter){
    //left to right traversal with different nonterminals, nodes and actions
    if(node -> nonTerminal == "<program>"){ //proram nonTerminal
       int varCount = 0; //initialize variable counter to 0
+      currScpFirstEle = totVarCount;
       semantics(node -> firstChild, varCount);
       semantics(node -> secondChild, varCount);
    }else if(node -> nonTerminal == "<block>"){ //block nonTerminal

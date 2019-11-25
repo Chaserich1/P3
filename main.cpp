@@ -30,9 +30,9 @@ int main (int argc, char** argv){
          return 0;   
       }
 
-      Node* root = parser();
-      treePrinted(root);
-      semantics(root, 0);
+      Node* node = parser();
+      //treePrinted(node);
+      semantics(node, 0);
 
       inFile.close();
    }
@@ -67,9 +67,9 @@ int main (int argc, char** argv){
          return 0;
       }
       
-      Node* root = parser();
-      treePrinted(root);
-      semantics(root, 0);
+      Node* node = parser();
+      //treePrinted(node);
+      semantics(node, 0);
    
       inFile.close();
    }

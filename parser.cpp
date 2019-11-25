@@ -34,7 +34,7 @@ Node* parser(){
    node = program(); //program is the first <non-terminal> in our BNF so call it
    //if it is the EofTk then we are finished and it was successful
    if(tkn.identiToken == EofTk){
-      cout << "Parsing Complete" << endl;
+      //cout << "Parsing Complete" << endl;
       return node; //root node
    } 
    //if we receive a token other than eof that is unexpected
